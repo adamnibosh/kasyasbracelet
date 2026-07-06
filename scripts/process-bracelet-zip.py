@@ -51,12 +51,29 @@ def enhance(im: Image.Image) -> Image.Image:
 
 
 def to_square_canvas(im: Image.Image, size: int) -> Image.Image:
+    im = im.convert("RGBA")
     w, h = im.size
-    scale = size / max(w, h)
+    scale = (size * 0.88) / max(w, h)
     nw, nh = max(1, int(w * scale)), max(1, int(h * scale))
     im = im.resize((nw, nh), Image.Resampling.LANCZOS)
+
+    px = im.load()
+    cx = cy = count = 0
+    for y in range(nh):
+        for x in range(nw):
+            if px[x, y][3] > 48:
+                cx += x
+                cy += y
+                count += 1
+    if count:
+        cx /= count
+        cy /= count
+    else:
+        cx, cy = nw / 2, nh / 2
+
     canvas = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    ox, oy = (size - nw) // 2, (size - nh) // 2
+    ox = int(size / 2 - cx)
+    oy = int(size / 2 - cy)
     canvas.paste(im, (ox, oy), im)
     return canvas
 

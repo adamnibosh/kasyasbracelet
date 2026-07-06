@@ -76,7 +76,7 @@ def bump_image_version() -> None:
     text = path.read_text(encoding="utf-8")
     text = re.sub(
         r"const IMAGE_VERSION = '[^']+';",
-        "const IMAGE_VERSION = 'v9-silver-letters';",
+        "const IMAGE_VERSION = 'v11-fix-o-3d';",
         text,
         count=1,
     )
