@@ -524,7 +524,7 @@ body {
   transform-style: preserve-3d;
   transform: rotateY(var(--ry, 0deg)) translateZ(var(--tz, 0px)) translateY(var(--ty, 0px));
   transition: transform 0.5s var(--ease);
-  margin: 0 -1px;
+  margin: 0 -14px;
 }
 
 .bv-link {

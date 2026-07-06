@@ -1,5 +1,5 @@
 /**
- * 3D Italian charm bracelet — HD charm planes in a rotating circle
+ * 3D Italian charm bracelet — connected link ring with HD charm textures
  */
 class Bracelet3D {
   constructor(container, options = {}) {
@@ -23,7 +23,6 @@ class Bracelet3D {
     this.isDragging = false;
     this.lastPointerX = 0;
     this._ready = false;
-    this._pendingTextures = 0;
 
     this._init();
     this._ready = true;
@@ -35,8 +34,8 @@ class Bracelet3D {
 
     this.scene = new THREE.Scene();
 
-    this.camera = new THREE.PerspectiveCamera(38, w / h, 0.1, 100);
-    this.camera.position.set(0, 3.8, 10.5);
+    this.camera = new THREE.PerspectiveCamera(36, w / h, 0.1, 100);
+    this.camera.position.set(0, 6.2, 8.8);
     this.camera.lookAt(0, 0, 0);
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -46,12 +45,18 @@ class Bracelet3D {
     this.renderer.domElement.className = 'bracelet-3d-canvas';
     this.container.appendChild(this.renderer.domElement);
 
-    this.scene.add(new THREE.AmbientLight(0xffffff, 1.1));
-    this.scene.add(new THREE.HemisphereLight(0xfff8f0, 0xe8ddd0, 0.55));
+    this.scene.add(new THREE.AmbientLight(0xffffff, 1.15));
+    this.scene.add(new THREE.HemisphereLight(0xfff8f0, 0xd8ccc0, 0.45));
 
-    const key = new THREE.DirectionalLight(0xffffff, 0.65);
-    key.position.set(4, 8, 6);
+    const key = new THREE.DirectionalLight(0xffffff, 0.55);
+    key.position.set(3, 10, 5);
     this.scene.add(key);
+
+    this.silverMat = new THREE.MeshBasicMaterial({
+      color: 0xc8ccd4,
+      transparent: true,
+      opacity: 0.85,
+    });
 
     this.braceletGroup = new THREE.Group();
     this.scene.add(this.braceletGroup);
@@ -79,32 +84,59 @@ class Bracelet3D {
     this.textureCache.clear();
     this._clearGroup(this.braceletGroup);
     this.linkMeshes = [];
-    this._pendingTextures = 0;
 
     const n = charmIds.length;
-    const linkSize = 0.95;
+    const linkSize = charmIds.some((id) => CHARM_MAP[id]?.dangling) ? 0.88 : 0.82;
+    const gap = 0.02;
     const radius = n <= 1
-      ? 2.4
-      : Math.max(2.0, (linkSize / (2 * Math.sin(Math.PI / n))) * 1.38);
-    const tiltZ = 0.55;
+      ? 1.8
+      : (linkSize - gap) / (2 * Math.sin(Math.PI / n));
 
     charmIds.forEach((id, i) => {
       const charm = CHARM_MAP[id] || CHARMS[0];
-      const linkGroup = this._createLink(charm, i);
       const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+      const linkGroup = this._createLink(charm, i, angle, radius, linkSize);
 
       const px = Math.cos(angle) * radius;
-      const pz = Math.sin(angle) * radius * tiltZ;
+      const pz = Math.sin(angle) * radius;
       linkGroup.position.set(px, 0, pz);
-      linkGroup.lookAt(px * 2.5, 0, pz * 2.5);
+      linkGroup.rotation.y = -angle;
 
       this.braceletGroup.add(linkGroup);
       this.linkMeshes.push(linkGroup);
+
+      if (i < n - 1) {
+        const nextAngle = ((i + 1) / n) * Math.PI * 2 - Math.PI / 2;
+        this.braceletGroup.add(this._createConnector(angle, nextAngle, radius));
+      } else if (n > 2) {
+        const nextAngle = (-Math.PI / 2);
+        this.braceletGroup.add(this._createConnector(angle, nextAngle, radius));
+      }
     });
 
-    this.braceletGroup.rotation.x = 0.28;
-    this.braceletGroup.scale.setScalar(1.15);
+    this.braceletGroup.rotation.x = 0.42;
+    this.braceletGroup.scale.setScalar(1.28);
     this.setSelectedIndex(this.selectedIndex);
+  }
+
+  _createConnector(angleA, angleB, radius) {
+    const g = new THREE.Group();
+    const mid = (angleA + angleB) / 2;
+    const span = Math.abs(angleB - angleA);
+    const len = 2 * radius * Math.sin(span / 2) * 0.92;
+
+    const bar = new THREE.Mesh(
+      new THREE.BoxGeometry(len, 0.05, 0.06),
+      this.silverMat
+    );
+    bar.position.set(
+      Math.cos(mid) * radius,
+      -0.02,
+      Math.sin(mid) * radius
+    );
+    bar.rotation.y = -mid + Math.PI / 2;
+    g.add(bar);
+    return g;
   }
 
   _clearGroup(group) {
@@ -121,11 +153,11 @@ class Bracelet3D {
     }
   }
 
-  _createLink(charm, index) {
+  _createLink(charm, index, angle, radius, linkSize) {
     const group = new THREE.Group();
-    group.userData = { index, charmId: charm.id, type: 'link' };
+    group.userData = { index, charmId: charm.id, type: 'link', baseAngle: angle, radius };
 
-    const size = charm.dangling ? 1.15 : 0.92;
+    const size = charm.dangling ? linkSize * 1.12 : linkSize;
     const tex = this._getTexture(charm);
 
     const face = new THREE.Mesh(
@@ -138,33 +170,23 @@ class Bracelet3D {
         depthWrite: true,
       })
     );
+    face.rotation.x = -Math.PI / 2;
+    face.position.y = 0.02;
     face.name = 'charmFace';
     group.add(face);
 
-    const shadow = new THREE.Mesh(
-      new THREE.PlaneGeometry(size * 0.88, size * 0.12),
-      new THREE.MeshBasicMaterial({
-        color: 0xc4b5a5,
-        transparent: true,
-        opacity: 0.22,
-        depthWrite: false,
-      })
-    );
-    shadow.rotation.x = -Math.PI / 2;
-    shadow.position.y = -size * 0.42;
-    shadow.position.z = 0.02;
-    group.add(shadow);
-
     const ring = new THREE.Mesh(
-      new THREE.RingGeometry(size * 0.48, size * 0.54, 48),
+      new THREE.RingGeometry(size * 0.46, size * 0.52, 48),
       new THREE.MeshBasicMaterial({
         color: 0xc4846a,
         transparent: true,
-        opacity: 0.9,
+        opacity: 0.85,
         side: THREE.DoubleSide,
         depthWrite: false,
       })
     );
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.06;
     ring.name = 'selectRing';
     ring.visible = false;
     group.add(ring);
@@ -181,7 +203,6 @@ class Bracelet3D {
     const placeholder = new THREE.Texture();
     this.textureCache.set(charm.id, placeholder);
 
-    this._pendingTextures += 1;
     this.textureLoader.load(
       url,
       (tex) => {
@@ -190,7 +211,6 @@ class Bracelet3D {
         tex.needsUpdate = true;
         this.textureCache.set(charm.id, tex);
         this._applyTextureToLinks(charm.id, tex);
-        this._pendingTextures -= 1;
       },
       undefined,
       () => {
@@ -202,10 +222,7 @@ class Bracelet3D {
             tex.needsUpdate = true;
             this.textureCache.set(charm.id, tex);
             this._applyTextureToLinks(charm.id, tex);
-            this._pendingTextures -= 1;
-          },
-          undefined,
-          () => { this._pendingTextures -= 1; }
+          }
         );
       }
     );
@@ -230,8 +247,7 @@ class Bracelet3D {
       const ring = mesh.getObjectByName('selectRing');
       const sel = i === index;
       if (ring) ring.visible = sel;
-      mesh.scale.setScalar(sel ? 1.14 : 1);
-      mesh.position.y = sel ? 0.12 : 0;
+      mesh.scale.setScalar(sel ? 1.1 : 1);
     });
   }
 
@@ -276,19 +292,25 @@ class Bracelet3D {
     requestAnimationFrame(() => this._animate());
     if (!this.renderer) return;
     const dt = this.clock.getDelta();
-    if (this.autoRotate && !this.isDragging) this.targetRotateY += dt * 0.38;
+    const t = performance.now() * 0.001;
+
+    if (this.autoRotate && !this.isDragging) this.targetRotateY += dt * 0.32;
     this.rotateY += (this.targetRotateY - this.rotateY) * 0.08;
+
     if (this.braceletGroup) {
       this.braceletGroup.rotation.y = this.rotateY;
-      this.braceletGroup.position.y = Math.sin(performance.now() * 0.0012) * 0.05;
-      const t = performance.now() * 0.001;
+
       this.linkMeshes.forEach((mesh, i) => {
+        mesh.position.y = Math.sin(t * 2.2 + i * 0.55) * 0.018;
         const charm = CHARM_MAP[this.charmIds[i]];
         if (charm?.dangling) {
-          mesh.rotation.z = Math.sin(t * 1.8 + i * 0.7) * 0.06;
+          mesh.rotation.z = Math.sin(t * 2.5 + i * 0.8) * 0.05;
+        } else {
+          mesh.rotation.z = 0;
         }
       });
     }
+
     this.renderer.render(this.scene, this.camera);
   }
 

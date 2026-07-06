@@ -21,7 +21,7 @@ const _BASE_CHARMS = [
     category: 'letters',
     render: 'letter',
     letter,
-    hint: 'Sterling silver letter charm from the collection.',
+    hint: 'Raised sterling silver letter on brushed silver base.',
   })),
 
   { id: 'heart-silver', name: 'Silver Heart', shopLabel: '9mm Silver Outline Heart Italian charm link', category: 'love', render: 'heart-silver', hint: 'Classic brushed silver heart outline.' },

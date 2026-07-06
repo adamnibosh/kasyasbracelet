@@ -1,5 +1,5 @@
 /** All bracelet.zip charms — transparent HD */
-const IMAGE_VERSION = 'v8-clay-3d';
+const IMAGE_VERSION = 'v9-silver-letters';
 
 const CHARM_IMAGE_MAP = {
   "anchor": "assets/charms-hd/anchor.png",

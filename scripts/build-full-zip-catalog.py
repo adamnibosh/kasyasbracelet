@@ -19,18 +19,8 @@ spec = importlib.util.spec_from_file_location("proc", ROOT / "scripts" / "proces
 proc = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(proc)
 
-# Letters A–Z from bracelet.zip (500px product shots)
-LETTER_STEMS = {
-    "letter-a": "54ebf031b94a", "letter-b": "88c2ef73fb2e", "letter-c": "175346fb2a8e",
-    "letter-d": "e74d45d0b681", "letter-e": "bbe80f9e86ef", "letter-f": "7f4312061414",
-    "letter-h": "b2c68fa5d6a7",
-    "letter-j": "6cf276e45154", "letter-k": "6e135abe45ef", "letter-l": "d6edc9765a68",
-    "letter-m": "b77a8f3f81ca", "letter-n": "69dd56fac88e", "letter-o": "180e69a90746",
-    "letter-p": "13a6cec624e5", "letter-q": "5bb959af1c8d", "letter-r": "cc4920d49832",
-    "letter-s": "2ce53255016b", "letter-t": "b1d823ea99ad", "letter-u": "ce763695cf91",
-    "letter-v": "96ddb8ba30be", "letter-w": "635784f2062d", "letter-x": "2afceda9ffe9",
-    "letter-y": "75327dc918ea", "letter-z": "2adf97645915",
-}
+# Letter variants only — standard A–Z come from FROM_OLD_JPG Nomination photos
+LETTER_STEMS = {}
 
 CATALOG_STEMS = {
     "blank-silver": "2c2776f394b2",
@@ -56,8 +46,8 @@ CATALOG_STEMS = {
     "star": "639b7db428bb",
 }
 
-# G and I not in zip as letter charms — use Nomination silver photos
-FROM_OLD_JPG = ["letter-g", "letter-i"]
+# Standard A–Z silver letters — Nomination product photos (not black zip enamel)
+FROM_OLD_JPG = [f"letter-{c}" for c in "abcdefghijklmnopqrstuvwxyz"]
 
 # Extra zip charms — stem -> metadata
 EXTRA_STEMS: dict[str, dict] = {
