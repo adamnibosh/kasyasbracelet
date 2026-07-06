@@ -323,7 +323,6 @@ class Bracelet3D {
     this.rotateY += (this.targetRotateY - this.rotateY) * 0.07;
 
     if (this.braceletGroup && this._layout) {
-      this.braceletGroup.rotation.y = this.rotateY;
       const { rx, rz } = this._layout;
 
       this.linkMeshes.forEach((mesh, i) => {
