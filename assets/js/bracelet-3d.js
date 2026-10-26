@@ -244,11 +244,13 @@ class Bracelet3D {
     body.name = 'linkBody';
     group.add(body);
 
-    const hookGeo = new THREE.TorusGeometry(0.058, 0.016, 8, 16, Math.PI * 0.95);
+    const hookGeo = new THREE.TorusGeometry(0.062, 0.018, 10, 20);
     [-1, 1].forEach((side) => {
       const hook = new THREE.Mesh(hookGeo, this.silverBezelMat);
       hook.rotation.y = Math.PI / 2;
-      hook.position.set(side * (size / 2 + 0.015), 0, depth * 0.12);
+      // Alternate connector planes so neighboring links read as interlocked.
+      hook.rotation.z = index % 2 === 0 ? 0 : Math.PI / 2;
+      hook.position.set(side * (size / 2 + 0.035), 0, depth * 0.12);
       group.add(hook);
     });
 
