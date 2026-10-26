@@ -17,10 +17,16 @@ class Bracelet3D {
     this.charmIds = [];
     this.textureCache = new Map();
     this.textureLoader = new THREE.TextureLoader();
+    this.rotateX = 0;
     this.rotateY = 0;
+    this.targetRotateX = 0;
     this.targetRotateY = 0;
     this.isDragging = false;
+    this.dragMoved = false;
+    this.dragStartX = 0;
+    this.dragStartY = 0;
     this.lastPointerX = 0;
+    this.lastPointerY = 0;
     this._layout = null;
     this._ready = false;
     this._building = false;
@@ -91,7 +97,7 @@ class Bracelet3D {
     el.addEventListener('pointerdown', (e) => this._onPointerDown(e));
     el.addEventListener('pointermove', (e) => this._onPointerMove(e));
     el.addEventListener('pointerup', () => { this.isDragging = false; });
-    el.addEventListener('pointerleave', () => { this.isDragging = false; });
+    el.addEventListener('pointercancel', () => { this.isDragging = false; });
     el.addEventListener('click', (e) => this._onClick(e));
 
     this._resizeObserver = new ResizeObserver(() => this.resize());
@@ -154,7 +160,7 @@ class Bracelet3D {
       this.linkMeshes.push(linkGroup);
     });
 
-    this.braceletGroup.rotation.set(0.08, 0, 0);
+    this.braceletGroup.rotation.set(0.2, 0, 0);
     this.braceletGroup.position.set(0, 0, 0);
     this.braceletGroup.scale.setScalar(1.25);
 
@@ -162,7 +168,7 @@ class Bracelet3D {
     const horizontalSpan = (rx * 2 + linkW) * 1.25;
     const verticalDistance = verticalSpan / (2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)) * 0.82);
     const horizontalDistance = horizontalSpan / (2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)) * this.camera.aspect * 0.82);
-    this.camera.position.set(0, 0.45, Math.max(7, verticalDistance, horizontalDistance));
+    this.camera.position.set(0, 1.7, Math.max(7, verticalDistance, horizontalDistance));
     this.camera.lookAt(0, 0, 0);
     this.setSelectedIndex(this.selectedIndex);
     this._building = false;
@@ -277,17 +283,32 @@ class Bracelet3D {
   }
 
   _onPointerDown(e) {
+    if (e.button !== undefined && e.button !== 0) return;
     this.isDragging = true;
-    this.lastPointerX = e.clientX;
+    this.dragMoved = false;
+    this.dragStartX = this.lastPointerX = e.clientX;
+    this.dragStartY = this.lastPointerY = e.clientY;
+    this.renderer.domElement.setPointerCapture?.(e.pointerId);
   }
 
   _onPointerMove(e) {
     if (!this.isDragging) return;
-    this.targetRotateY += (e.clientX - this.lastPointerX) * 0.011;
+    const dx = e.clientX - this.lastPointerX;
+    const dy = e.clientY - this.lastPointerY;
+    if (Math.hypot(e.clientX - this.dragStartX, e.clientY - this.dragStartY) > 5) {
+      this.dragMoved = true;
+    }
+    this.targetRotateY += dx * 0.008;
+    this.targetRotateX = THREE.MathUtils.clamp(this.targetRotateX + dy * 0.008, -0.75, 0.75);
     this.lastPointerX = e.clientX;
+    this.lastPointerY = e.clientY;
   }
 
   _onClick(e) {
+    if (this.dragMoved) {
+      this.dragMoved = false;
+      return;
+    }
     const rect = this.renderer.domElement.getBoundingClientRect();
     this.pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
     this.pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
@@ -319,12 +340,14 @@ class Bracelet3D {
     const dt = this.clock.getDelta();
     const t = performance.now() * 0.001;
 
-    if (this.autoRotate && !this.isDragging) this.targetRotateY += dt * 0.26;
+    if (this.autoRotate && !this.isDragging) this.targetRotateY += dt * 0.08;
+    this.rotateX += (this.targetRotateX - this.rotateX) * 0.07;
     this.rotateY += (this.targetRotateY - this.rotateY) * 0.07;
 
     if (this.braceletGroup && this._layout) {
-      // Turn the bracelet in its own plane so the charm faces stay visible.
-      this.braceletGroup.rotation.z = this.rotateY;
+      // Orbit around both axes so the view has real depth, not only a flat spin.
+      this.braceletGroup.rotation.x = 0.2 + this.rotateX;
+      this.braceletGroup.rotation.y = this.rotateY;
 
       this.linkMeshes.forEach((mesh, i) => {
         const flex = Math.sin(t * 2.2 + i * 0.6) * 0.012;

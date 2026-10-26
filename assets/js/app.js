@@ -138,7 +138,7 @@
       if (libDesc) libDesc.textContent = 'Tap any charm below to replace your selected link';
     } else {
       bar.hidden = true;
-      hint.textContent = 'Select a link, then choose from the collection below';
+      hint.textContent = 'Drag to orbit the bracelet in 3D · Select a link to customize it';
       hint.classList.remove('is-active');
       if (libDesc) libDesc.textContent = 'Authentic 9mm sterling silver links — select to add to your bracelet';
     }
