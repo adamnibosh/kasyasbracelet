@@ -48,6 +48,16 @@ class Bracelet3D {
       metalness: 0.22,
       roughness: 0.36,
     });
+    this.skinMat = new THREE.MeshStandardMaterial({
+      color: 0xc99578,
+      roughness: 0.78,
+      metalness: 0,
+    });
+    this.nailMat = new THREE.MeshStandardMaterial({
+      color: 0xe8c9b9,
+      roughness: 0.46,
+      metalness: 0,
+    });
     this.selectMat = new THREE.MeshBasicMaterial({
       color: 0xc4846a,
       transparent: true,
@@ -133,48 +143,148 @@ class Bracelet3D {
   _buildBracelet(charmIds) {
     this._clearGroup(this.braceletGroup);
     this.linkMeshes = [];
+    this._building = true;
 
+    // The wrist is a fixed, adult-sized mannequin. Each link is modeled at its
+    // nominal 9mm size, so a short design visibly leaves a gap instead of being
+    // stretched to look like it fits.
+    const linkW = 0.42;
+    const wristY = 1.30;
+    const wristZ = 0.95;
+    const pathY = 1.40;
+    const pathZ = 1.05;
+    const circumference = Math.PI * (3 * (pathY + pathZ) - Math.sqrt((3 * pathY + pathZ) * (pathY + 3 * pathZ)));
+    const fullLinkCount = Math.max(1, Math.round(circumference / linkW));
     const n = Math.max(charmIds.length, 1);
-    const linkW = 0.82;
-    const circumference = Math.max(n * linkW * 0.96, linkW * 2.6);
-    const rx = circumference / 5.7;
-    const ry = rx * 0.91;
+    const angleStep = n >= fullLinkCount ? (Math.PI * 2) / n : (Math.PI * 2) / fullLinkCount;
+    const visibleArc = Math.min(angleStep * n, Math.PI * 2);
+    const startAngle = -visibleArc / 2 + angleStep / 2;
 
-    this._layout = { n, rx, ry, linkW };
+    this._layout = { n, linkW, wristY, wristZ, fullLinkCount };
+    this._createWrist(wristY, wristZ);
 
     charmIds.forEach((id, i) => {
       const charm = CHARM_MAP[id] || CHARMS[0];
-      const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
-      const pt = this._ellipsePoint(angle, rx, ry);
+      const angle = startAngle + angleStep * i;
+      const y = pathY * Math.sin(angle);
+      const z = pathZ * Math.cos(angle);
+      const tangent = new THREE.Vector3(0, pathY * Math.cos(angle), -pathZ * Math.sin(angle)).normalize();
+      const normal = new THREE.Vector3(0, Math.sin(angle) / pathY, Math.cos(angle) / pathZ).normalize();
+      const alongArm = new THREE.Vector3(1, 0, 0);
       const linkGroup = this._createLink(charm, i, linkW);
-      const tangent = Math.atan2(ry * Math.cos(angle), -rx * Math.sin(angle));
 
-      linkGroup.position.set(pt.x, pt.y, pt.z);
-      // Keep every charm face toward the viewer and upright so the full design is legible.
-      linkGroup.rotation.z = tangent * 0.08;
+      // Align each square face with the curve of the wrist, pointing outward.
+      const basis = new THREE.Matrix4().makeBasis(alongArm, tangent, normal);
+      linkGroup.quaternion.setFromRotationMatrix(basis);
+      linkGroup.position.set(-0.35, y, z);
+      linkGroup.userData.basePosition = linkGroup.position.clone();
+      linkGroup.userData.baseQuaternion = linkGroup.quaternion.clone();
       linkGroup.userData.baseAngle = angle;
-      linkGroup.userData.baseRotationZ = linkGroup.rotation.z;
-      linkGroup.userData.baseZ = pt.z;
 
       this.braceletGroup.add(linkGroup);
       this.linkMeshes.push(linkGroup);
     });
 
-    this.braceletGroup.rotation.set(0.2, 0, 0);
+    const horizontalSpan = 13.4;
+    const verticalSpan = 4.8;
+    const fitDistance = Math.max(
+      horizontalSpan / (2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)) * this.camera.aspect * 0.92),
+      verticalSpan / (2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)) * 0.90)
+    );
+    this.braceletGroup.rotation.set(0.10, 0, 0);
     this.braceletGroup.position.set(0, 0, 0);
-    this.braceletGroup.scale.setScalar(1.25);
-
-    const verticalSpan = (ry * 2 + linkW) * 1.25;
-    const horizontalSpan = (rx * 2 + linkW) * 1.25;
-    const verticalDistance = verticalSpan / (2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)) * 0.82);
-    const horizontalDistance = horizontalSpan / (2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)) * this.camera.aspect * 0.82);
-    this.camera.position.set(0, 1.7, Math.max(7, verticalDistance, horizontalDistance));
+    this.braceletGroup.scale.setScalar(1);
+    this.camera.position.set(0, 2.9, Math.max(15, fitDistance));
     this.camera.lookAt(0, 0, 0);
     this.setSelectedIndex(this.selectedIndex);
     this._building = false;
   }
 
-  _loadTexturePromise(charmId) {
+  _createWrist(wristY, wristZ) {
+    const skin = this.skinMat;
+    const nail = this.nailMat;
+
+    // A softly tapered forearm, palm and fingers make the 9mm links readable at
+    // human scale. The hand is deliberately generic; it is a sizing reference,
+    // not a scan of Kasya's hand.
+    const sections = [
+      [-6.0, 1.56, 1.00],
+      [-5.2, 1.50, 0.98],
+      [-4.2, 1.40, 0.94],
+      [-3.2, 1.34, 0.91],
+      [-2.3, 1.28, 0.89],
+      [-1.4, 1.26, 0.90],
+      [-0.7, wristY, wristZ],
+      [0.0, 1.32, 0.96],
+      [0.55, 1.42, 0.94],
+      [1.0, 1.44, 0.82],
+      [1.35, 1.34, 0.68],
+    ];
+    const around = 40;
+    const vertices = [];
+    const indices = [];
+
+    sections.forEach(([x, ry, rz]) => {
+      for (let j = 0; j < around; j++) {
+        const a = (j / around) * Math.PI * 2;
+        vertices.push(x, ry * Math.cos(a), rz * Math.sin(a));
+      }
+    });
+    for (let i = 0; i < sections.length - 1; i++) {
+      for (let j = 0; j < around; j++) {
+        const a = i * around + j;
+        const b = i * around + ((j + 1) % around);
+        const c = (i + 1) * around + ((j + 1) % around);
+        const d = (i + 1) * around + j;
+        indices.push(a, b, c, a, c, d);
+      }
+    }
+    const armGeometry = new THREE.BufferGeometry();
+    armGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    armGeometry.setIndex(indices);
+    armGeometry.computeVertexNormals();
+    this.braceletGroup.add(new THREE.Mesh(armGeometry, skin));
+
+    const sphere = new THREE.SphereGeometry(1, 28, 20);
+    const ellipsoid = (position, scale, material, rotationZ = 0) => {
+      const mesh = new THREE.Mesh(sphere, material);
+      mesh.position.set(position[0], position[1], position[2]);
+      mesh.scale.set(scale[0], scale[1], scale[2]);
+      mesh.rotation.z = rotationZ;
+      this.braceletGroup.add(mesh);
+      return mesh;
+    };
+
+    // Palm blends into the forearm; four fingers and a thumb give a clear
+    // on-hand silhouette without obscuring the bracelet.
+    ellipsoid([2.00, 0, 0.08], [1.50, 1.22, 0.48], skin, -0.04);
+    const fingers = [
+      { y: -0.98, end: 6.45, width: 0.35, tilt: -0.035 },
+      { y: -0.33, end: 7.08, width: 0.37, tilt: -0.015 },
+      { y: 0.34, end: 7.00, width: 0.37, tilt: 0.015 },
+      { y: 0.98, end: 6.48, width: 0.35, tilt: 0.045 },
+    ];
+    fingers.forEach((finger) => {
+      const startX = 2.55;
+      const length = finger.end - startX;
+      ellipsoid(
+        [startX + length * 0.52, finger.y, 0.08],
+        [length * 0.58, finger.width, 0.15],
+        skin,
+        finger.tilt
+      );
+      // Small knuckle pads and natural, pale nail beds help the hand read as a
+      // hand when viewed from above.
+      ellipsoid([startX + length * 0.38, finger.y, 0.20], [0.28, finger.width * 0.76, 0.07], skin);
+      ellipsoid([finger.end - 0.17, finger.y, 0.215], [0.22, finger.width * 0.48, 0.035], nail, finger.tilt);
+    });
+
+    ellipsoid([1.48, -1.08, 0.08], [0.75, 0.36, 0.17], skin, -0.62);
+    ellipsoid([1.92, -1.48, 0.12], [0.63, 0.31, 0.16], skin, -0.58);
+    ellipsoid([2.38, -1.79, 0.19], [0.24, 0.18, 0.045], nail, -0.55);
+  }
+
+    _loadTexturePromise(charmId) {
     if (this.textureCache.has(charmId)) {
       const cached = this.textureCache.get(charmId);
       if (cached.image?.width) return Promise.resolve(cached);
@@ -215,6 +325,8 @@ class Bracelet3D {
           && obj.material !== this.silverMat
           && obj.material !== this.silverBezelMat
           && obj.material !== this.selectMat
+          && obj.material !== this.skinMat
+          && obj.material !== this.nailMat
           && !obj.material.map) {
           obj.material.dispose();
         }
@@ -350,12 +462,10 @@ class Bracelet3D {
       this.braceletGroup.rotation.y = this.rotateY;
 
       this.linkMeshes.forEach((mesh, i) => {
-        const flex = Math.sin(t * 2.2 + i * 0.6) * 0.012;
-        mesh.position.z = mesh.userData.baseZ + flex;
-
         const charm = CHARM_MAP[this.charmIds[i]];
-        const swing = charm?.dangling ? Math.sin(t * 2.5 + i) * 0.06 : 0;
-        mesh.rotation.z = mesh.userData.baseRotationZ + swing;
+        const swing = charm?.dangling ? Math.sin(t * 2.5 + i) * 0.035 : 0;
+        mesh.quaternion.copy(mesh.userData.baseQuaternion);
+        if (swing) mesh.rotateZ(swing);
       });
     }
 

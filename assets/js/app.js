@@ -138,7 +138,7 @@
       if (libDesc) libDesc.textContent = 'Tap any charm below to replace your selected link';
     } else {
       bar.hidden = true;
-      hint.textContent = 'Drag to orbit the bracelet in 3D · Select a link to customize it';
+      hint.textContent = 'Worn on a hand · links shown at 9mm · drag to see the fit';
       hint.classList.remove('is-active');
       if (libDesc) libDesc.textContent = 'Authentic 9mm sterling silver links — select to add to your bracelet';
     }
@@ -449,6 +449,7 @@
   $('#btn-review').onclick = () => {
     renderBraceletIn(reviewEl, null, true);
     $('#review-count').textContent = `${bracelet.length} links · ${new Set(bracelet).size} unique charms`;
+    $('#review-fit-note').textContent = `Illustrative hand model · 9mm links · about ${bracelet.length * 9}mm total. Add links until the gap closes.`;
     reviewModal.showModal();
   };
   $('#review-close').onclick = () => reviewModal.close();
