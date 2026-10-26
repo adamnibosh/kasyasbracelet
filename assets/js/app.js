@@ -448,7 +448,8 @@
   $('#review-approve').onclick = approve;
   $('#btn-review').onclick = () => {
     renderBraceletIn(reviewEl, null, true);
-    $('#review-count').textContent = `${bracelet.length} links · ${new Set(bracelet).size} unique charms`;\n    $('#review-fit-note').textContent = `Each link is shown at 9mm. Add links to close the fit around the wrist.`;
+    $('#review-count').textContent = `${bracelet.length} links · ${new Set(bracelet).size} unique charms`;
+    $('#review-fit-note').textContent = `Each link is shown at 9mm. Add links to close the fit around the wrist.`;
     reviewModal.showModal();
   };
   $('#review-close').onclick = () => reviewModal.close();
