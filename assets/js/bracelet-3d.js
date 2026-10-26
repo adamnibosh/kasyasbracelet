@@ -57,7 +57,7 @@ class Bracelet3D {
     this.scene = new THREE.Scene();
 
     this.camera = new THREE.PerspectiveCamera(32, w / h, 0.1, 100);
-    this.camera.position.set(0, 2.4, 11);
+    this.camera.position.set(0, 0.45, 9);
     this.camera.lookAt(0, 0, 0);
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -99,10 +99,12 @@ class Bracelet3D {
     this._animate();
   }
 
-  _ellipsePoint(angle, rx, rz) {
-    const c = Math.cos(angle);
-    const s = Math.sin(angle);
-    return { x: rx * c, z: rz * s, nx: c / rx, nz: s / rz };
+  _ellipsePoint(angle, rx, ry) {
+    return {
+      x: rx * Math.cos(angle),
+      y: ry * Math.sin(angle),
+      z: 0.025 * Math.sin(angle * 2),
+    };
   }
 
   setBracelet(charmIds) {
@@ -126,35 +128,42 @@ class Bracelet3D {
     this._clearGroup(this.braceletGroup);
     this.linkMeshes = [];
 
-    const n = charmIds.length;
+    const n = Math.max(charmIds.length, 1);
     const linkW = 0.82;
-    const overlap = 0.96;
-    const radius = n <= 1 ? 2.2 : (linkW * overlap) / (2 * Math.sin(Math.PI / n));
-    const rx = radius * 1.12;
-    const rz = radius * 0.88;
+    const circumference = Math.max(n * linkW * 0.96, linkW * 2.6);
+    const rx = circumference / 5.7;
+    const ry = rx * 0.91;
 
-    this._layout = { n, rx, rz };
+    this._layout = { n, rx, ry, linkW };
 
     charmIds.forEach((id, i) => {
       const charm = CHARM_MAP[id] || CHARMS[0];
       const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
-      const pt = this._ellipsePoint(angle, rx, rz);
-      const len = Math.hypot(pt.nx, pt.nz) || 1;
-      const nx = pt.nx / len;
-      const nz = pt.nz / len;
-
+      const pt = this._ellipsePoint(angle, rx, ry);
       const linkGroup = this._createLink(charm, i, linkW);
-      linkGroup.position.set(pt.x, 0, pt.z);
-      linkGroup.lookAt(pt.x + nx * 5, 0, pt.z + nz * 5);
+      const tangent = Math.atan2(ry * Math.cos(angle), -rx * Math.sin(angle));
+
+      linkGroup.position.set(pt.x, pt.y, pt.z);
+      // Keep every charm face toward the viewer and upright so the full design is legible.
+      linkGroup.rotation.z = tangent * 0.08;
       linkGroup.userData.baseAngle = angle;
+      linkGroup.userData.baseRotationZ = linkGroup.rotation.z;
+      linkGroup.userData.baseZ = pt.z;
 
       this.braceletGroup.add(linkGroup);
       this.linkMeshes.push(linkGroup);
     });
 
-    this.braceletGroup.rotation.x = 0.22;
-    this.braceletGroup.position.y = 0.1;
-    this.braceletGroup.scale.setScalar(1.26);
+    this.braceletGroup.rotation.set(0.08, 0, 0);
+    this.braceletGroup.position.set(0, 0, 0);
+    this.braceletGroup.scale.setScalar(1.25);
+
+    const verticalSpan = (ry * 2 + linkW) * 1.25;
+    const horizontalSpan = (rx * 2 + linkW) * 1.25;
+    const verticalDistance = verticalSpan / (2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)) * 0.82);
+    const horizontalDistance = horizontalSpan / (2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)) * this.camera.aspect * 0.82);
+    this.camera.position.set(0, 0.45, Math.max(7, verticalDistance, horizontalDistance));
+    this.camera.lookAt(0, 0, 0);
     this.setSelectedIndex(this.selectedIndex);
     this._building = false;
   }
@@ -324,25 +333,16 @@ class Bracelet3D {
     this.rotateY += (this.targetRotateY - this.rotateY) * 0.07;
 
     if (this.braceletGroup && this._layout) {
-      const { rx, rz } = this._layout;
+      // Turn the bracelet in its own plane so the charm faces stay visible.
+      this.braceletGroup.rotation.z = this.rotateY;
 
       this.linkMeshes.forEach((mesh, i) => {
-        const angle = mesh.userData.baseAngle + this.rotateY;
-        const pt = this._ellipsePoint(angle, rx, rz);
-        const len = Math.hypot(pt.nx, pt.nz) || 1;
-        const nx = pt.nx / len;
-        const nz = pt.nz / len;
-        const flex = Math.sin(t * 2.2 + i * 0.6) * 0.02;
-
-        mesh.position.set(pt.x + nx * flex, flex * 0.3, pt.z + nz * flex);
-        mesh.lookAt(pt.x + nx * 5, flex * 0.3, pt.z + nz * 5);
+        const flex = Math.sin(t * 2.2 + i * 0.6) * 0.012;
+        mesh.position.z = mesh.userData.baseZ + flex;
 
         const charm = CHARM_MAP[this.charmIds[i]];
-        if (charm?.dangling) {
-          mesh.rotation.z = Math.sin(t * 2.5 + i) * 0.06;
-        } else {
-          mesh.rotation.z = 0;
-        }
+        const swing = charm?.dangling ? Math.sin(t * 2.5 + i) * 0.06 : 0;
+        mesh.rotation.z = mesh.userData.baseRotationZ + swing;
       });
     }
 
