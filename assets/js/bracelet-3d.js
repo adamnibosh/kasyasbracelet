@@ -236,7 +236,7 @@ class Bracelet3D {
         const b = i * around + ((j + 1) % around);
         const c = (i + 1) * around + ((j + 1) % around);
         const d = (i + 1) * around + j;
-        indices.push(a, c, b, a, d, c);
+        indices.push(a, b, c, a, c, d);
       }
     }
     const armGeometry = new THREE.BufferGeometry();
