@@ -449,7 +449,7 @@
   $('#btn-review').onclick = () => {
     renderBraceletIn(reviewEl, null, true);
     $('#review-count').textContent = `${bracelet.length} links · ${new Set(bracelet).size} unique charms`;
-    $('#review-fit-note').textContent = `Each link is shown at 9mm. Add links to close the fit around the wrist.`;
+    $('#review-fit-note').textContent = `Illustrative hand model · 9mm links · about ${bracelet.length * 9}mm total. Add links until the gap closes.`;
     reviewModal.showModal();
   };
   $('#review-close').onclick = () => reviewModal.close();
