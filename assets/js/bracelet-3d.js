@@ -216,12 +216,6 @@ class Bracelet3D {
     }
   }
 
-  _createSideWall(w, h, d, x, y, z) {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), this.silverBezelMat);
-    m.position.set(x, y, z);
-    return m;
-  }
-
   _createLink(charm, index, linkW) {
     const group = new THREE.Group();
     group.userData = { index, charmId: charm.id, type: 'link' };
@@ -243,24 +237,18 @@ class Bracelet3D {
     face.name = 'charmFace';
     group.add(face);
 
-    const back = new THREE.Mesh(
-      new THREE.PlaneGeometry(size * 0.9, size * 0.9),
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(size * 0.98, size * 0.98, depth),
       this.silverMat
     );
-    back.position.z = -depth / 2 - 0.01;
-    group.add(back);
+    body.name = 'linkBody';
+    group.add(body);
 
-    const t = 0.035;
-    group.add(this._createSideWall(size, t, depth, 0, size / 2, 0));
-    group.add(this._createSideWall(size, t, depth, 0, -size / 2, 0));
-    group.add(this._createSideWall(t, size, depth, -size / 2, 0, 0));
-    group.add(this._createSideWall(t, size, depth, size / 2, 0, 0));
-
-    const hookGeo = new THREE.TorusGeometry(0.042, 0.012, 8, 12, Math.PI * 0.95);
+    const hookGeo = new THREE.TorusGeometry(0.058, 0.016, 8, 16, Math.PI * 0.95);
     [-1, 1].forEach((side) => {
       const hook = new THREE.Mesh(hookGeo, this.silverBezelMat);
       hook.rotation.y = Math.PI / 2;
-      hook.position.set(side * (size / 2 + 0.03), 0, depth * 0.1);
+      hook.position.set(side * (size / 2 + 0.015), 0, depth * 0.12);
       group.add(hook);
     });
 
