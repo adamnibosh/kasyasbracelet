@@ -31,15 +31,16 @@ class Bracelet3D {
   }
 
   _initMaterials() {
+    // Keep enough diffuse response for bright silver without an environment map.
     this.silverMat = new THREE.MeshStandardMaterial({
-      color: 0xe4e8ee,
-      metalness: 0.88,
-      roughness: 0.3,
+      color: 0xdce1e8,
+      metalness: 0.18,
+      roughness: 0.42,
     });
     this.silverBezelMat = new THREE.MeshStandardMaterial({
       color: 0xc8ced8,
-      metalness: 0.9,
-      roughness: 0.25,
+      metalness: 0.22,
+      roughness: 0.36,
     });
     this.selectMat = new THREE.MeshBasicMaterial({
       color: 0xc4846a,
