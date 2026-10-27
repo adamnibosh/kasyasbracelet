@@ -155,6 +155,7 @@ class Bracelet3D {
     const pathZ = 1.05;
     const circumference = Math.PI * (3 * (pathY + pathZ) - Math.sqrt((3 * pathY + pathZ) * (pathY + 3 * pathZ)));
     const fullLinkCount = Math.max(1, Math.round(circumference / linkW));
+    this.container.dataset.minimumLinks = String(fullLinkCount);
     const n = Math.max(charmIds.length, 1);
     const angleStep = n >= fullLinkCount ? (Math.PI * 2) / n : (Math.PI * 2) / fullLinkCount;
     const visibleArc = Math.min(angleStep * n, Math.PI * 2);
@@ -365,10 +366,9 @@ class Bracelet3D {
     const hookGeo = new THREE.TorusGeometry(0.062, 0.018, 10, 20);
     [-1, 1].forEach((side) => {
       const hook = new THREE.Mesh(hookGeo, this.silverBezelMat);
-      hook.rotation.y = Math.PI / 2;
-      // Alternate connector planes so neighboring links read as interlocked.
-      hook.rotation.z = index % 2 === 0 ? 0 : Math.PI / 2;
-      hook.position.set(side * (size / 2 + 0.035), 0, depth * 0.12);
+      // Connectors sit at the ends of the bracelet path, not across the arm.
+      hook.rotation.x = index % 2 === 0 ? Math.PI / 2 : 0;
+      hook.position.set(0, side * (size / 2 + 0.035), depth * 0.12);
       group.add(hook);
     });
 
