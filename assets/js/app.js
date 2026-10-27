@@ -449,7 +449,15 @@
   $('#btn-review').onclick = () => {
     renderBraceletIn(reviewEl, null, true);
     $('#review-count').textContent = `${bracelet.length} links · ${new Set(bracelet).size} unique charms`;
-    $('#review-fit-note').textContent = `Illustrative hand model · 9mm links · about ${bracelet.length * 9}mm total. Add links until the gap closes.`;
+    const minimumLinks = Number(reviewEl.dataset.minimumLinks) || 18;
+    const missingLinks = Math.max(0, minimumLinks - bracelet.length);
+    const totalLength = bracelet.length * 9;
+    const minimumLength = minimumLinks * 9;
+    $('#review-fit-note').textContent = missingLinks
+      ? (bracelet.length === 1
+        ? 'One link is a loose piece; it cannot stay closed on the wrist. ' + minimumLinks + ' links (~' + minimumLength + 'mm) wrap this model wrist. Add ' + missingLinks + ' more.'
+        : 'Your ' + bracelet.length + ' links (~' + totalLength + 'mm) do not close around this model wrist. Minimum: ' + minimumLinks + ' links (~' + minimumLength + 'mm); add ' + missingLinks + ' more.')
+      : minimumLinks + ' links (~' + minimumLength + 'mm) close around this illustrative wrist. Kasya’s exact fit depends on her measurement.';
     reviewModal.showModal();
   };
   $('#review-close').onclick = () => reviewModal.close();
