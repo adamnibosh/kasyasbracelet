@@ -138,7 +138,7 @@
       if (libDesc) libDesc.textContent = 'Tap any charm below to replace your selected link';
     } else {
       bar.hidden = true;
-      hint.textContent = 'Hand fit: 18 links close this model wrist · drag to view';
+      hint.textContent = 'Hand fit: 18 links · drag to turn, scroll/pinch to zoom';
       hint.classList.remove('is-active');
       if (libDesc) libDesc.textContent = 'Authentic 9mm sterling silver links — select to add to your bracelet';
     }
