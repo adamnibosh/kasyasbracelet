@@ -23,6 +23,8 @@ class Bracelet3D {
     this.targetRotateY = 0;
     this.isDragging = false;
     this.dragMoved = false;
+    this.activePointers = new Map();
+    this.pinchDistance = null;
     this.dragStartX = 0;
     this.dragStartY = 0;
     this.lastPointerX = 0;
@@ -106,8 +108,9 @@ class Bracelet3D {
     const el = this.renderer.domElement;
     el.addEventListener('pointerdown', (e) => this._onPointerDown(e));
     el.addEventListener('pointermove', (e) => this._onPointerMove(e));
-    el.addEventListener('pointerup', () => { this.isDragging = false; });
-    el.addEventListener('pointercancel', () => { this.isDragging = false; });
+    el.addEventListener('pointerup', (e) => this._onPointerUp(e));
+    el.addEventListener('pointercancel', (e) => this._onPointerUp(e));
+    el.addEventListener('wheel', (e) => this._onWheel(e), { passive: false });
     el.addEventListener('click', (e) => this._onClick(e));
 
     this._resizeObserver = new ResizeObserver(() => this.resize());
@@ -195,7 +198,8 @@ class Bracelet3D {
     this.braceletGroup.rotation.set(0.10, 0, 0);
     this.braceletGroup.position.set(0, 0, 0);
     this.braceletGroup.scale.setScalar(1);
-    this.camera.position.set(0, 2.9, Math.max(15, fitDistance));
+    if (!this._cameraDistance) this._cameraDistance = Math.max(15, fitDistance);
+    this.camera.position.set(0, 2.9, this._cameraDistance);
     this.camera.lookAt(0, 0, 0);
     this.setSelectedIndex(this.selectedIndex);
     this._building = false;
@@ -396,14 +400,33 @@ class Bracelet3D {
 
   _onPointerDown(e) {
     if (e.button !== undefined && e.button !== 0) return;
+    this.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    this.renderer.domElement.setPointerCapture?.(e.pointerId);
+    if (this.activePointers.size >= 2) {
+      this.isDragging = false;
+      this.pinchDistance = this._getPinchDistance();
+      this.dragMoved = true;
+      return;
+    }
     this.isDragging = true;
     this.dragMoved = false;
     this.dragStartX = this.lastPointerX = e.clientX;
     this.dragStartY = this.lastPointerY = e.clientY;
-    this.renderer.domElement.setPointerCapture?.(e.pointerId);
   }
 
   _onPointerMove(e) {
+    if (this.activePointers.has(e.pointerId)) {
+      this.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    }
+    if (this.activePointers.size >= 2) {
+      const nextDistance = this._getPinchDistance();
+      if (this.pinchDistance && nextDistance > 0) {
+        this._zoom(this.pinchDistance / nextDistance);
+      }
+      this.pinchDistance = nextDistance;
+      this.dragMoved = true;
+      return;
+    }
     if (!this.isDragging) return;
     const dx = e.clientX - this.lastPointerX;
     const dy = e.clientY - this.lastPointerY;
@@ -416,7 +439,31 @@ class Bracelet3D {
     this.lastPointerY = e.clientY;
   }
 
-  _onClick(e) {
+  _onPointerUp(e) {
+    this.activePointers.delete(e.pointerId);
+    this.isDragging = false;
+    if (this.activePointers.size < 2) this.pinchDistance = null;
+  }
+
+  _getPinchDistance() {
+    const points = [...this.activePointers.values()];
+    if (points.length < 2) return 0;
+    return Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+  }
+
+  _onWheel(e) {
+    e.preventDefault();
+    this._zoom(Math.exp(e.deltaY * 0.001));
+  }
+
+  _zoom(factor) {
+    const currentDistance = this.camera.position.length();
+    const nextDistance = THREE.MathUtils.clamp(currentDistance * factor, 8, 40);
+    this.camera.position.multiplyScalar(nextDistance / currentDistance);
+    this._cameraDistance = this.camera.position.z;
+  }
+
+    _onClick(e) {
     if (this.dragMoved) {
       this.dragMoved = false;
       return;
