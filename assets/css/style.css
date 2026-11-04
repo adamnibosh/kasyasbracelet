@@ -1307,3 +1307,63 @@ body.gifter-mode #review-approve { display: none; }
   .bracelet-3d-canvas { height: 340px !important; }
   .bracelet-viewport.is-3d { min-height: 340px; }
 }
+
+/* ---- 3D viewer controls ------------------------------------------------ */
+.bracelet-3d-canvas.is-dragging { cursor: grabbing; }
+.bracelet-3d-canvas:focus { outline: none; }
+.bracelet-3d-canvas:focus-visible { outline: 2px solid var(--clay-terracotta); outline-offset: -2px; }
+
+.b3d-tools {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  display: flex;
+  gap: 0.4rem;
+  z-index: 3;
+}
+
+.b3d-tool {
+  width: 2.3rem;
+  height: 2.3rem;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--clay-raised);
+  color: var(--clay-text);
+  box-shadow: var(--clay-shadow-soft);
+  cursor: pointer;
+  transition: transform 0.2s var(--ease), color 0.2s ease;
+}
+
+.b3d-tool:hover { transform: translateY(-1px); color: var(--clay-terracotta-dark); }
+.b3d-tool:active { transform: translateY(0) scale(0.96); box-shadow: var(--clay-shadow-pressed); }
+.b3d-tool:focus-visible { outline: 2px solid var(--clay-terracotta); outline-offset: 2px; }
+.b3d-tool[aria-pressed="false"] { color: var(--clay-muted); }
+
+.b3d-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 0.8rem;
+  transform: translateX(-50%);
+  padding: 0.3rem 0.8rem;
+  border-radius: var(--radius-pill);
+  background: rgba(250, 247, 242, 0.78);
+  color: var(--clay-muted);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+  transition: opacity 0.6s ease;
+}
+
+.b3d-hint.is-hidden { opacity: 0; }
+
+@media (max-width: 640px) {
+  .b3d-hint { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .b3d-tool { transition: none; }
+}

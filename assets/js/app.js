@@ -15,7 +15,8 @@
   const toast = $('#toast');
   const loadingEl = $('#bracelet-loading');
 
-  const can3d = typeof THREE !== 'undefined' && typeof Bracelet3D !== 'undefined';
+  let can3d = typeof THREE !== 'undefined' && typeof Bracelet3D !== 'undefined'
+    && (typeof Bracelet3D.isSupported !== 'function' || Bracelet3D.isSupported());
   let viewer3d = null;
   let review3d = null;
 
@@ -96,6 +97,13 @@
           onSelect: isReview ? () => {} : (idx) => handlers.onSelect(idx),
           autoRotate: !isReview,
         });
+        if (!active.ready) {
+          // WebGL failed to start: fall back to the flat 2D view instead of a dead panel.
+          can3d = false;
+          el.innerHTML = '';
+          renderBraceletIn(el, index, isReview);
+          return;
+        }
         if (isReview) review3d = active;
         else viewer3d = active;
       }
@@ -138,7 +146,7 @@
       if (libDesc) libDesc.textContent = 'Tap any charm below to replace your selected link';
     } else {
       bar.hidden = true;
-      hint.textContent = 'Hand fit: 18 links · drag to turn, scroll/pinch to zoom';
+      hint.textContent = 'Hand fit: 18 links · drag to turn, scroll/pinch to zoom, double-click a link to focus';
       hint.classList.remove('is-active');
       if (libDesc) libDesc.textContent = 'Authentic 9mm sterling silver links — select to add to your bracelet';
     }
